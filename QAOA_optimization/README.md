@@ -22,26 +22,62 @@ QAOA_optimization/
 
 ## 模型
 
-原始评分函数为：
+原始评分函数定义为：
 
-```text
-R = theta1 * mu^T x - half_q * x^T Sigma x - eta * (B - 1^T x)^2
-```
+$$
+R
+=
+\theta_1 \mu^\top x
+-
+\frac{q}{2} x^\top \Sigma x
+-
+\eta \left(B - \mathbf{1}^\top x \right)^2
+$$
 
-三项含义：
+其中三项分别表示：
 
-- `theta1 * mu^T x`：组合的期望收益，选中的资产期望收益越高，评分越高。
-- `half_q * x^T Sigma x`：组合风险惩罚，由方差和协方差共同决定；`half_q = q / 2`，风险偏好越大，对风险惩罚越强。
-- `eta * (B - 1^T x)^2`：预算等式约束惩罚，使最优解倾向于选择正好 `B` 只股票。
+- $\theta_1 \mu^\top x$：组合的期望收益项。被选中的资产期望收益越高，评分越高。
 
-代码将损失函数取为 `Hc = -R`，并用 `x_i = (I - Z_i) / 2` 转换为 QAOA 的 `Z` 和 `ZZ` 哈密顿量。对单 qubit 编码股票时：
+- $\dfrac{q}{2} x^\top \Sigma x$：风险惩罚项。由资产方差与协方差共同决定；风险偏好参数 $q$ 越大，对风险的惩罚越强。
 
-```text
-h_i = -1/4 * q * sum_j Sigma_ij + 1/2 * theta1 * mu_i + eta * (B - n/2)
-J_ij = 1/4 * q * Sigma_ij + 1/2 * eta
-```
+- $\eta \left(B - \mathbf{1}^\top x \right)^2$：预算约束惩罚项，用于约束最终选择的股票数量接近预算 $B$。
 
-其中代码参数 `half_q = q / 2`，所以 PDF 要求的 `q = 0.5` 对应 `--half_q 0.25`。
+代码中将损失函数定义为：
+
+$$
+H_C = -R
+$$
+
+并使用变量替换：
+
+$$
+x_i = \frac{I - Z_i}{2}
+$$
+
+将目标函数映射为 QAOA 所需的 $Z$ 与 $ZZ$ 哈密顿量形式。
+
+对于单 qubit 编码的股票选择问题，可得到：
+
+$$
+h_i
+=
+-\frac{q}{4}\sum_j \Sigma_{ij}
++
+\frac{\theta_1}{2}\mu_i
++
+\eta\left(B-\frac{n}{2}\right)
+$$
+
+以及：
+
+$$
+J_{ij}
+=
+\frac{q}{4}\Sigma_{ij}
++
+\frac{\eta}{2}
+$$
+
 
 ## 运行
 
