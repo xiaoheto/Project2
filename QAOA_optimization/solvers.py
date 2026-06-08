@@ -4,13 +4,14 @@ from qiskit.algorithms.optimizers import SPSA
 from scipy.optimize import minimize
 
 
-class OptimizationCallback:
+class OptimizationCallback: # 训练日志记录器，每迭代一次，就记录下loss
     def __init__(self, step_size):
         self.step_size = step_size
-        self.full_values = []
-        self._values = []
-        self.values = []
+        self.full_values = [] # 每次回调时的loss
+        self._values = [] # 临时缓存
+        self.values = [] # 按照step_size抽样保存的loss
 
+    # nfev: 函数评估次数, parameters: 当前参数, value: 当前loss, step_size: 当前步长, accepted: 这一步是否被接受
     def __call__(self, nfev, parameters, value, stepsize, accepted):
         self.full_values.append(value)
         self._values.append(value)
@@ -23,6 +24,7 @@ class OptimizationCallback:
 
 
 def get_expectation(circuit, para_list, hamiltonian, simulator, num_qubits):
+    # 把一个参数化量子电路包装成一个可以被经典优化器调用的loss函数
     def execute_circ(theta):
         qc = QuantumCircuit(num_qubits)
 
@@ -49,6 +51,7 @@ def get_expectation(circuit, para_list, hamiltonian, simulator, num_qubits):
 
 
 def optimize_parameters(expectation, layers, maxiter, use_scipy_optimizer, verbose=True):
+    # 计算哈密顿量期望值，作为loss
     start_point = np.random.uniform(0, 0.001 * np.pi, size=layers * 2)
 
     if use_scipy_optimizer:

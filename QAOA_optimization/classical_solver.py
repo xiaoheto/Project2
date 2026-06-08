@@ -1,13 +1,13 @@
 import numpy as np
 
-
-def brute_force_solution(config, exp_ret, cov_mat):
+# \theta_1 \mu^T x - \text{half_q} \cdot x^T \Sigma x - \eta (B - \sum_i x_i)^2
+def brute_force_solution(config, exp_ret, cov_mat): # 指数级复杂度
     best_selection = None
     best_loss = None
     best_utility = None
     total_states = 2 ** config.num_qubits
 
-    for dec in range(total_states):
+    for dec in range(total_states): # 枚举全部状态
         bits = np.array([(dec >> i) & 1 for i in range(config.num_qubits)], dtype=float)
         holdings = np.zeros(config.num_assets)
         for i in range(config.num_qubits):

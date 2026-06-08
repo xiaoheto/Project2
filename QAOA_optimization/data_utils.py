@@ -7,7 +7,7 @@ def data_preprocessing(file_path):
     Read stock closing prices and return expected returns and covariance matrix.
     """
     df = pd.read_excel(file_path)
-    df = df.select_dtypes(include=[np.number])
+    df = df.select_dtypes(include=[np.number]) # 只保留数值列
     if df.empty:
         raise ValueError("No numeric stock price columns found in {}".format(file_path))
 
@@ -16,10 +16,10 @@ def data_preprocessing(file_path):
         raise ValueError("At least two rows of stock prices are required.")
 
     returns = (data[1:, :] - data[:-1, :]) / data[:-1, :]
-    exp_ret = pd.Series(returns.mean(axis=0), index=df.columns, name="expected_return")
+    exp_ret = pd.Series(returns.mean(axis=0), index=df.columns, name="expected_return") # 期望收益率
     cov_mat = pd.DataFrame(np.cov(returns, rowvar=False, ddof=1),
                            index=df.columns,
-                           columns=df.columns)
+                           columns=df.columns) # 协方差矩阵
     return exp_ret, cov_mat
 
 

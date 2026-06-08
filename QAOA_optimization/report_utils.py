@@ -5,6 +5,7 @@ from qiskit import QuantumCircuit, transpile
 
 
 def print_config(config):
+    # 打印model_config
     print("%%%%%%%%%%%%%%%%%%%% Configuration %%%%%%%%%%%%%%%%%%%%")
     print("budget: %d, g: %d, theta1: %f, half_q: %f, eta: %f, layers: %d" %
           (config.budget,
@@ -30,6 +31,7 @@ def save_circuit_diagram(circuit, output_dir):
 
 
 def str_to_statevector(string):
+    # 把二进制比特串变成它对应的标准基态向量
     dec = int(string, 2)
     state = np.zeros(2 ** len(string))
     state[dec] = 1.0

@@ -1,7 +1,7 @@
 import numpy as np
 from qiskit.opflow import PauliSumOp
 
-
+# \theta_1 \mu^T x - \text{half_q} \cdot x^T \Sigma x - \eta (B - \sum_i x_i)^2
 def calc_J(config, cov_mat):
     """
     Calculate ZZ coefficients in Hc = -R after replacing x_i with (I - Z_i) / 2.
