@@ -29,6 +29,7 @@ def get_expectation(circuit, para_list, hamiltonian, simulator, num_qubits):
         qc = QuantumCircuit(num_qubits)
 
         p = len(theta) // 2
+        # 参数向量约定为 [beta_0, ..., beta_{p-1}, gamma_0, ..., gamma_{p-1}]。
         beta = theta[:p]
         gamma = theta[p:]
 
@@ -37,6 +38,7 @@ def get_expectation(circuit, para_list, hamiltonian, simulator, num_qubits):
             para_dict[para_list[i]] = beta[i]
             para_dict[para_list[i + p]] = gamma[i]
 
+        # 每次优化迭代都把同一个参数化 ansatz 绑定成一个具体线路，再送入模拟器求期望值。
         qc.append(circuit, range(num_qubits))
         qc.assign_parameters(para_dict, inplace=True)
         circ = transpile(qc, simulator)
@@ -65,6 +67,7 @@ def optimize_parameters(expectation, layers, maxiter, use_scipy_optimizer, verbo
         return res.x, res, None
 
     callback_func = OptimizationCallback(step_size=1)
+    # SPSA 适合噪声环境和高维参数场景，这里直接对 QAOA 的 2p 个参数做优化。
     optimizer = SPSA(maxiter=maxiter, blocking=True, second_order=True, callback=callback_func)
     if hasattr(optimizer, "minimize"):
         opt_result = optimizer.minimize(fun=expectation, x0=start_point)

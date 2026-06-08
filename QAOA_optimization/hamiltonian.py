@@ -14,6 +14,7 @@ def calc_J(config, cov_mat):
         for j in range(i + 1, config.num_qubits):
             asset_j = config.qubit_asset(j)
             weight_j = config.qubit_weight(j)
+            # ZZ 项只来自二次项：风险项 x^T Sigma x 和预算惩罚项 (sum x_i)^2。
             J[i][j] = 0.5 * config.half_q * cov_mat[asset_i][asset_j] * weight_i * weight_j
             J[i][j] += 0.5 * config.eta * weight_i * weight_j
             J[j][i] = J[i][j]
@@ -37,6 +38,7 @@ def calc_h(config, exp_ret, cov_mat):
             weight_j = config.qubit_weight(j)
             cov_sum += cov_mat[asset_i][asset_j] * weight_j
 
+        # Z 项由三部分合并而来：风险项展开后的线性部分、收益项、预算惩罚的线性部分。
         h[i] = -0.5 * config.half_q * weight_i * cov_sum
         h[i] += 0.5 * config.theta1 * exp_ret[asset_i] * weight_i
         h[i] += config.eta * weight_i * (config.budget - 0.5 * total_weight)
@@ -55,6 +57,7 @@ def get_pauli(index, pauli_type, num_qubits):
     pauli = ["I"] * num_qubits
     for qubit_index in index:
         assert 0 <= qubit_index <= num_qubits - 1
+        # Qiskit 的 Pauli 字符串按高位 qubit -> 低位 qubit 排列，所以这里要反向映射。
         pauli[num_qubits - 1 - qubit_index] = "Z"
     return "".join(pauli)
 

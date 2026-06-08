@@ -64,6 +64,7 @@ def print_qaoa_result(circuit, hamiltonian_matrix, para_list, solution, simulato
     for bitstring, _ in result:
         states.append(str_to_statevector(bitstring))
     states = np.concatenate(states, axis=0)
+    # 这里逐个基态计算 <z|H|z>，用于和 statevector 概率分布一起展示每个组合的能量。
     values = np.real_if_close(np.sum((states @ hamiltonian_matrix) * states, axis=1))
 
     min_index = np.argmin(values)
@@ -118,4 +119,5 @@ def get_sorted_probabilities(circuit, para_list, solution, simulator, num_qubits
     probabilities = {}
     for bitstring, amplitude in statevector.items():
         probabilities[bitstring] = np.abs(np.array(amplitude)) ** 2
+    # 这里返回的 bitstring 是 Qiskit 的显示顺序，打印给用户时在外层再做一次 [::-1]。
     return sorted(probabilities.items(), key=lambda kv: (kv[1], kv[0]), reverse=True)
