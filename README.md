@@ -108,6 +108,139 @@ python qaoa_qiskit.py --budget 4 --half_q 0.25 --eta 6 --layers 3 --maxiter 300 
 - `output/qaoa_one_layer_circuit.txt` 单层 QAOA 门级线路图。
 - `output/budget_<B>_layers_<p>_eta_<eta>.npz` 结果文件。
 
+## 本源量子真机实验
+
+为了和本地无噪声 statevector 理论结果对比，项目额外提供了一个适合真机运行的小规模实验配置：
+
+```text
+num_assets = 4
+budget = 2
+layers = 1
+eta = 6
+shots = 2000
+backend = WK_C180
+```
+
+选择这个配置的原因是线路只有 4 个 qubit 和 1 层 QAOA，双比特门数量较少，比较适合第一次提交到真实超导量子计算机。直接提交 6 qubit、3 层线路也可以，但线路更深，噪声影响会更明显。
+
+### 1. 导出真机线路
+
+本地先训练 QAOA 参数，并导出一个不包含 `save_statevector`、只包含测量操作的 OpenQASM 文件：
+
+```bash
+conda run -n qaoa python QAOA_optimization/export_hardware_qasm.py \
+  --num_assets 4 \
+  --budget 2 \
+  --half_q 0.25 \
+  --eta 6 \
+  --layers 1 \
+  --maxiter 120 \
+  --shots 2000
+```
+
+该命令会生成：
+
+- `QAOA_optimization/output/hardware_assets_4_budget_2_layers_1_eta_6.0.qasm`：提交到真机的 OpenQASM 线路。
+- `QAOA_optimization/output/hardware_assets_4_budget_2_layers_1_eta_6.0_params.json`：训练得到的 QAOA 参数和最优组合记录。
+- `QAOA_optimization/output/hardware_assets_4_budget_2_layers_1_eta_6.0_reference.csv`：本地 statevector 理论概率分布。
+
+本次实验得到的本地理论结果为：
+
+```text
+经典暴力最优组合: 1100
+QAOA 最大概率组合: 1100
+QAOA 理论概率: 0.1232432830
+最优参数 [beta_0, gamma_0]: [1.2884728618399324, -2.012525901022809]
+```
+
+### 2. 安装 PyQPanda3
+
+本源量子官方 `pyqpanda3` 支持 Python 3.10 到 3.14，而本项目 Qiskit 依赖建议使用 Python 3.8。因此真机提交部分建议单独创建一个 Python 3.13 虚拟环境，不要和 Qiskit 环境混装：
+
+```bash
+python -m venv .venv_pyqpanda3
+.venv_pyqpanda3/bin/python -m pip install -i https://pypi.org/simple pyqpanda3
+```
+
+如果默认 pip 镜像没有同步 `pyqpanda3`，需要像上面一样显式使用官方 PyPI 源。安装完成后，提交脚本会使用 `pyqpanda3.qcloud.QCloudService` 访问本源量子云。
+
+### 3. 查看可用后端
+
+不要把 API key 写进代码或提交到 git。可以使用 `--ask-key` 运行时输入：
+
+```bash
+.venv_pyqpanda3/bin/python QAOA_optimization/submit_originq_job.py \
+  --ask-key \
+  --list-backends \
+  --qasm QAOA_optimization/output/hardware_assets_4_budget_2_layers_1_eta_6.0.qasm
+```
+
+本次账号可见的后端为：
+
+```text
+HanYuan_01    False
+PQPUMESH8     True
+WK_C180       True
+WK_C180_2     True
+full_amplitude        True
+partial_amplitude     True
+single_amplitude      True
+```
+
+其中 `WK_C180` 是本次使用的本源悟空真机后端。
+
+### 4. 提交真机任务
+
+```bash
+.venv_pyqpanda3/bin/python QAOA_optimization/submit_originq_job.py \
+  --ask-key \
+  --backend WK_C180 \
+  --shots 2000 \
+  --qasm QAOA_optimization/output/hardware_assets_4_budget_2_layers_1_eta_6.0.qasm \
+  --output QAOA_optimization/output/originq_wk_c180_counts.json
+```
+
+本次提交结果：
+
+```text
+job_id: B217D293EBA37E3A376D18A012C667C1
+backend: WK_C180
+shots: 2000
+status: FINISHED
+```
+
+真机测量 counts 排名前几位为：
+
+```text
+1100: 199 / 2000 = 0.0995
+0101: 190 / 2000 = 0.0950
+0110: 190 / 2000 = 0.0950
+1010: 188 / 2000 = 0.0940
+1001: 177 / 2000 = 0.0885
+0011: 168 / 2000 = 0.0840
+```
+
+### 5. 对比理论结果和真机结果
+
+```bash
+conda run -n qaoa python QAOA_optimization/compare_hardware_counts.py \
+  --counts QAOA_optimization/output/originq_wk_c180_counts.json \
+  --reference QAOA_optimization/output/hardware_assets_4_budget_2_layers_1_eta_6.0_reference.csv \
+  --top 16 \
+  --bit-order selection
+```
+
+核心对比结果：
+
+```text
+理论最优组合: 1100
+理论概率: 0.123243
+真机频率: 0.099500
+差值: -0.023743
+```
+
+可以在报告中这样解释：本地 statevector 模拟是无噪声理论结果，真机实验来自真实超导芯片的有限 shots 采样。实验中最优组合 `1100` 仍然是真机测量频率最高的状态，说明真机结果保留了 QAOA 理论分布的主要趋势；但其概率从理论的约 `12.32%` 降到真机的约 `9.95%`，并且其他状态概率整体更分散。这主要来自真实硬件中的单/双比特门误差、退相干、读出误差、线路编译映射误差以及有限采样统计波动。
+
 ## 附加题 eta 扫描
 
 第 4 题已经提供自动扫参脚本：

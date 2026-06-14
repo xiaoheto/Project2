@@ -1,0 +1,17 @@
+{
+  "num_assets": 4,
+  "budget": 2,
+  "layers": 1,
+  "eta": 6.0,
+  "shots": 2000,
+  "solution": [
+    1.2884728618399324,
+    -2.012525901022809
+  ],
+  "optimizer_fun": -4.185119245800386,
+  "classical_selection": "1100",
+  "classical_loss": -0.0025640671864986184,
+  "classical_utility": 0.0025640671864986184,
+  "qaoa_top_selection": "1100",
+  "qaoa_top_probability": 0.12324328300605014
+}
