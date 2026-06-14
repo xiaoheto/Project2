@@ -2,6 +2,7 @@ import numpy as np
 from qiskit.opflow import PauliSumOp
 
 # \theta_1 \mu^T x - \text{half_q} \cdot x^T \Sigma x - \eta (B - \sum_i x_i)^2
+# 哈密顿量模块：负责把 QUBO 目标函数整理成 QAOA cost layer 所需的 Z/ZZ 系数。
 def calc_J(config, cov_mat):
     """
     Calculate ZZ coefficients in Hc = -R after replacing x_i with (I - Z_i) / 2.
@@ -63,6 +64,7 @@ def get_pauli(index, pauli_type, num_qubits):
 
 
 def problem_pauli_operator(h, J, num_qubits):
+    # PauliSumOp 是 Qiskit 0.46 中表示哈密顿量的对象，可直接用于 statevector 期望值计算。
     pauli_h_list = [(get_pauli([i], "Z", num_qubits), h[i]) for i in range(num_qubits)]
     pauli_h = PauliSumOp.from_list(pauli_h_list, coeff=1.0)
 

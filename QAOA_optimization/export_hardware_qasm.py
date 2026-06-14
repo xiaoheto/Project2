@@ -17,6 +17,7 @@ from report_utils import ensure_output_dir, get_sorted_probabilities
 from solvers import get_expectation, optimize_parameters
 
 
+# 真机前处理脚本：先在本地训练 QAOA，再导出“已绑定参数 + 带测量”的 OpenQASM。
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--budget", type=int, default=2)
@@ -35,6 +36,7 @@ def parse_args():
 
 
 def build_config(args):
+    # 默认配置使用 4 qubit、1 层 QAOA，降低真实硬件上的噪声影响。
     return PortfolioConfig(
         budget=args.budget,
         num_assets=args.num_assets,
@@ -48,6 +50,7 @@ def build_config(args):
 
 
 def build_measurement_circuit(num_qubits, h, J, beta, gamma, layers, solution):
+    # 不能直接复用 build_qaoa_circuit，因为其中包含 save_statevector，真机不支持。
     circuit = QuantumCircuit(num_qubits)
     circuit.append(insert_h(num_qubits), range(num_qubits))
     for i in range(layers):
@@ -56,11 +59,14 @@ def build_measurement_circuit(num_qubits, h, J, beta, gamma, layers, solution):
     para_dict = {}
     p = len(solution) // 2
     for i in range(p):
+        # solution 的前半部分是 beta，后半部分是 gamma。
         para_dict[beta[i]] = solution[i]
         para_dict[gamma[i]] = solution[i + p]
 
     circuit.assign_parameters(para_dict, inplace=True)
+    # 展开复合门，导出的 QASM 更容易被其他 SDK 或云平台解析。
     circuit = circuit.decompose(reps=4)
+    # 真机只能返回测量采样 counts，不能返回完整 statevector。
     circuit.measure_all()
     return circuit
 
@@ -74,6 +80,7 @@ def main():
     data_path = Path(args.data) if args.data is not None else project_dir / "data" / "stock_data.xlsx"
 
     config = build_config(args)
+    # 以下流程和 qaoa_qiskit.py 保持一致，保证真机线路使用同一个目标哈密顿量。
     exp_ret, cov_mat = load_portfolio_data(data_path, config.num_assets)
     J = calc_J(config, cov_mat)
     h = calc_h(config, exp_ret, cov_mat)
@@ -91,6 +98,7 @@ def main():
         verbose=False,
     )
 
+    # reference.csv 保存本地理论概率，真机 counts 会用它做对比。
     probabilities = get_sorted_probabilities(qaoa_circuit, para_list, solution, simulator, config.num_qubits)
     classical_selection, classical_loss, classical_utility = brute_force_solution(config, exp_ret, cov_mat)
     measurement_circuit = build_measurement_circuit(
@@ -104,6 +112,7 @@ def main():
     params_path = output_dir / "hardware_{}_params.json".format(tag)
     csv_path = output_dir / "hardware_{}_reference.csv".format(tag)
 
+    # 三个文件分别对应：真机输入线路、参数记录、理论概率参考。
     qasm_path.write_text(qasm2.dumps(measurement_circuit), encoding="utf-8")
     params_path.write_text(json.dumps({
         "num_assets": config.num_assets,

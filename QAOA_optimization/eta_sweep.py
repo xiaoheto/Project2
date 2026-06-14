@@ -14,12 +14,14 @@ from model_config import PortfolioConfig
 from report_utils import ensure_output_dir, get_sorted_probabilities
 from solvers import get_expectation, optimize_parameters
 
+# matplotlib 默认会写用户目录；课程/沙箱环境里用 /tmp 避免权限问题。
 os.environ.setdefault("MPLCONFIGDIR", "/tmp/matplotlib")
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 
+# 扫描不同 eta 的脚本：用于观察预算惩罚强度对 QAOA 分布的影响。
 def parse_eta_values(raw):
     return [float(item.strip()) for item in raw.split(",") if item.strip()]
 
@@ -42,6 +44,7 @@ def parse_args():
 
 
 def build_config(args, eta):
+    # 除 eta 外，其余参数保持一致，这样扫描结果只反映预算惩罚强度变化。
     return PortfolioConfig(
         budget=args.budget,
         num_assets=args.num_assets,
@@ -55,6 +58,7 @@ def build_config(args, eta):
 
 
 def run_single_eta(args, eta, exp_ret, cov_mat, simulator):
+    # 对某一个 eta 完整跑一遍：构造哈密顿量、训练 QAOA、和经典最优解比较。
     config = build_config(args, eta)
     J = calc_J(config, cov_mat)
     h = calc_h(config, exp_ret, cov_mat)
@@ -75,6 +79,7 @@ def run_single_eta(args, eta, exp_ret, cov_mat, simulator):
     probabilities = get_sorted_probabilities(qaoa_circuit, para_list, solution, simulator, config.num_qubits)
     probability_map = dict(probabilities)
 
+    # classical_solver 的 selection 是低位 qubit 在前；Qiskit bitstring 显示顺序相反。
     optimum_key = classical_selection[::-1]
     qaoa_top_key, qaoa_top_probability = probabilities[0]
     optimum_probability = probability_map.get(optimum_key, 0.0)
@@ -92,6 +97,7 @@ def run_single_eta(args, eta, exp_ret, cov_mat, simulator):
 
 
 def write_csv(rows, path):
+    # CSV 保存每个 eta 的核心指标，方便在报告中引用或重新画图。
     fieldnames = [
         "eta",
         "classical_selection",
@@ -109,6 +115,7 @@ def write_csv(rows, path):
 
 
 def plot_eta_sweep(rows, path):
+    # 同时画“经典最优态概率”和“QAOA 最高概率态概率”，便于判断是否跑偏。
     etas = [row["eta"] for row in rows]
     optimum_probabilities = [row["optimum_probability"] for row in rows]
     top_probabilities = [row["qaoa_top_probability"] for row in rows]
@@ -145,6 +152,7 @@ def main():
 
     rows = []
     for eta in parse_eta_values(args.etas):
+        # 每个 eta 独立训练一次；eta 过大或过小都会改变优化 landscape。
         row = run_single_eta(args, eta, exp_ret, cov_mat, simulator)
         rows.append(row)
         print("eta={:.3f}, optimum={}, p(optimum)={:.6f}, top={}, p(top)={:.6f}".format(

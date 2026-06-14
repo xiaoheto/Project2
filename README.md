@@ -88,7 +88,7 @@ cd QAOA_optimization
 pip install -r requirements.txt
 ```
 
-运行 PDF 第 3 题参数：
+运行第三题：
 
 ```bash
 python qaoa_qiskit.py --budget 4 --half_q 0.25 --eta 6 --layers 3 --maxiter 300
@@ -239,7 +239,7 @@ conda run -n qaoa python QAOA_optimization/compare_hardware_counts.py \
 差值: -0.023743
 ```
 
-可以在报告中这样解释：本地 statevector 模拟是无噪声理论结果，真机实验来自真实超导芯片的有限 shots 采样。实验中最优组合 `1100` 仍然是真机测量频率最高的状态，说明真机结果保留了 QAOA 理论分布的主要趋势；但其概率从理论的约 `12.32%` 降到真机的约 `9.95%`，并且其他状态概率整体更分散。这主要来自真实硬件中的单/双比特门误差、退相干、读出误差、线路编译映射误差以及有限采样统计波动。
+解释：本地 statevector 模拟是无噪声理论结果，真机实验来自真实超导芯片的有限 shots 采样。实验中最优组合 `1100` 仍然是真机测量频率最高的状态，说明真机结果保留了 QAOA 理论分布的主要趋势；但其概率从理论的约 `12.32%` 降到真机的约 `9.95%`，并且其他状态概率整体更分散。这主要来自真实硬件中的单/双比特门误差、退相干、读出误差、线路编译映射误差以及有限采样统计波动。
 
 ## 附加题 eta 扫描
 
@@ -254,7 +254,7 @@ python eta_sweep.py --etas 0.1,0.5,1,2,3,4,6,8,10,12 --layers 2 --maxiter 80
 - `output/eta_sweep.csv`：每个 `eta` 的经典最优组合、最优组合在 QAOA 结果中的概率、QAOA 最高概率组合。
 - `output/eta_sweep.png`：最优组合概率随 `eta` 变化的折线图。
 
-报告中可以引用 `eta_sweep.png` 并结合 `eta_sweep.csv` 分析。一般现象是：`eta` 太小时预算约束不够强，最高概率组合可能不满足 `1^T x = B`；`eta` 增大后，满足预算约束的组合概率会更容易提升，但过大也可能让优化 landscape 更陡，增加参数优化难度。
+ `eta_sweep.png` 结合 `eta_sweep.csv` 分析。现象是：`eta` 太小时预算约束不够强，最高概率组合可能不满足 `1^T x = B`；`eta` 增大后，满足预算约束的组合概率会更容易提升，但过大也可能让优化 landscape 更陡，增加参数优化难度。
 
 混合层的作用是让量子态在不同二进制组合之间转移，避免只停留在初态或损失层相位编码上。除 `Rx` 外，也可用标准 QAOA 中的 `X` mixing Hamiltonian，或针对约束问题使用保持 Hamming weight 的 XY mixer。多个 qubit 编码一个股票可以表示不同持仓比例，但 qubit 数增加会扩大搜索空间，线路和经典模拟成本也会快速上升。
 

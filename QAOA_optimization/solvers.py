@@ -4,7 +4,10 @@ from qiskit.algorithms.optimizers import SPSA
 from scipy.optimize import minimize
 
 
-class OptimizationCallback: # 训练日志记录器，每迭代一次，就记录下loss
+# 求解模块：把参数化量子线路包装成经典优化器可以调用的 loss 函数。
+
+# 训练日志记录器，每迭代一次，就记录下loss
+class OptimizationCallback:
     def __init__(self, step_size):
         self.step_size = step_size
         self.full_values = [] # 每次回调时的loss
@@ -54,9 +57,11 @@ def get_expectation(circuit, para_list, hamiltonian, simulator, num_qubits):
 
 def optimize_parameters(expectation, layers, maxiter, use_scipy_optimizer, verbose=True):
     # 计算哈密顿量期望值，作为loss
+    # 初始点设得很小，避免一开始就让旋转角过大导致搜索不稳定。
     start_point = np.random.uniform(0, 0.001 * np.pi, size=layers * 2)
 
     if use_scipy_optimizer:
+        # COBYLA 是无梯度经典优化器，适合这里的黑盒期望值函数。
         res = minimize(expectation,
                        start_point,
                        method="COBYLA",

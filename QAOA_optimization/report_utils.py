@@ -4,6 +4,7 @@ import numpy as np
 from qiskit import QuantumCircuit, transpile
 
 
+# 输出与保存模块：集中处理打印、概率排序和结果文件，避免主流程太长。
 def print_config(config):
     # 打印model_config
     print("%%%%%%%%%%%%%%%%%%%% Configuration %%%%%%%%%%%%%%%%%%%%")
@@ -17,12 +18,14 @@ def print_config(config):
 
 
 def ensure_output_dir(base_dir):
+    # 所有脚本统一把结果写到 QAOA_optimization/output。
     output_dir = Path(base_dir) / "output"
     output_dir.mkdir(exist_ok=True)
     return output_dir
 
 
 def save_circuit_diagram(circuit, output_dir):
+    # 只导出单层线路图，便于报告展示；多层线路会很长。
     diagram_path = Path(output_dir) / "qaoa_one_layer_circuit.txt"
     with open(diagram_path, "w", encoding="utf-8") as f:
         f.write(str(circuit.decompose(reps=2).draw(output="text", fold=-1)))
@@ -89,8 +92,10 @@ def print_qaoa_result(circuit, hamiltonian_matrix, para_list, solution, simulato
         value_save.append(value)
         probability_save.append(probability)
         utility_save.append(-value)
+        # 打印时反转 bitstring，使 selection 和 classical_solver 的显示顺序一致。
         print("%d\t%-10s\t%.8f\t\t%.8f" % (i, bitstring[::-1], value, probability), flush=True)
 
+    # 保存的是按概率排序后的能量和概率，用于后续报告分析或画图。
     np.savez(Path(output_dir) / "budget_{}_layers_{}_eta_{}.npz".format(
              config.budget, config.layers, config.eta),
              value=np.array(value_save),

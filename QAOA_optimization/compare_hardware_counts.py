@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 
+# 真机结果对比脚本：把本源云 counts 和本地 statevector 理论概率逐项对齐。
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--counts", required=True, help="JSON file like {\"0011\": 230, \"0110\": 210}.")
@@ -19,6 +20,7 @@ def parse_args():
 
 
 def load_reference(path):
+    # reference.csv 来自 export_hardware_qasm.py，包含两种 bitstring 顺序。
     rows = []
     with open(path, newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
@@ -33,6 +35,7 @@ def load_reference(path):
 
 
 def load_counts(path):
+    # 支持两种输入：纯 counts dict，或 submit_originq_job.py 保存的完整任务 JSON。
     with open(path, encoding="utf-8") as f:
         raw = json.load(f)
     if isinstance(raw, dict) and "counts" in raw:
@@ -45,6 +48,7 @@ def main():
     reference = load_reference(Path(args.reference))
     counts = load_counts(Path(args.counts))
     shots = sum(counts.values())
+    # 不同平台可能用不同 bit 顺序显示结果，因此提供 qiskit/selection 两种匹配方式。
     key_field = "qiskit_bitstring" if args.bit_order == "qiskit" else "selection"
 
     print("shots:", shots)
